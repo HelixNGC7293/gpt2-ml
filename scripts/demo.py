@@ -166,12 +166,13 @@ with tf.Session(config=tf_config, graph=tf.Graph()) as sess:
     tokens, probs = sample(news_config=news_config, initial_context=initial_context,
                            eos_token=eos_token, min_len=min_len, ignore_ids=None, p_for_topp=p_for_topp,
                            do_topk=False)
-
+                           
     saver = tf.train.Saver()
     saver.restore(sess, args.ckpt_fn)
-    print('🍺Model loaded. \nInput something please:⬇️')
-    text = input()
-    while text != "":
+    #print('🍺Model loaded. \nInput something please:⬇️')
+    text = args.input
+    print('🍺Model loaded. \nGenerating the stories of "', text, '"')
+    if text != "":
         for i in range(args.samples):
             print("Sample,", i + 1, " of ", args.samples)
             line = tokenization.convert_to_unicode(text)
@@ -185,6 +186,10 @@ with tf.Session(config=tf_config, graph=tf.Graph()) as sess:
             gens_raw = []
             gen_probs = []
 
+            # adding these 2 lines fixed the hang forever problem
+            coord = tf.train.Coordinator()
+            threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+
             for chunk_i in range(num_chunks):
                 tokens_out, probs_out = sess.run([tokens, probs],
                                                  feed_dict={initial_context: [context_formatted] * batch_size_per_chunk,
@@ -197,5 +202,5 @@ with tf.Session(config=tf_config, graph=tf.Graph()) as sess:
 
             l = re.findall('.{1,70}', gens[0].replace('[UNK]', '').replace('##', ''))
             print("\n".join(l))
-        print('Next try:⬇️')
-        text = input()
+        #print('Next try:⬇️')
+        #text = input()
